@@ -37,6 +37,7 @@
 namespace chip {
 namespace Shell {
 
+
 class OnOffCommands
 {
 public:

@@ -73,6 +73,7 @@
 #include <platform/ESP32/NetworkCommissioningDriver.h>
 #include <platform/ESP32/OTAImageProcessorImpl.h>
 #include <platform/GenericOTARequestorDriver.h>
+#include <platform/OTARequestorInterface.h>
 #include <setup_payload/ManualSetupPayloadGenerator.h>
 #include <setup_payload/QRCodeSetupPayloadGenerator.h>
 
@@ -612,6 +613,7 @@ static void InitServer(intptr_t context)
 static void InitOTARequestor(void)
 {
 #if CONFIG_ENABLE_OTA_REQUESTOR
+    ESP_LOGI(TAG, "bkrawetz: InitOTARequestor");
     SetRequestorInstance(&gRequestorCore);
     gRequestorCore.Init(&Server::GetInstance(), &gRequestorUser, &gDownloader);
     gImageProcessor.SetOTADownloader(&gDownloader);
@@ -741,12 +743,23 @@ extern "C" void app_main()
                        ESP_LOGI(TAG, "Opening Status screen");
                        ScreenManager::PushScreen(chip::Platform::New<StatusScreen>());
                    })
-            ->Item("Custom",
+            ->Item("Trigger OTA",
                    []() {
-                       ESP_LOGI(TAG, "Opening custom screen");
-                       ScreenManager::PushScreen(chip::Platform::New<CustomScreen>());
+                       ESP_LOGI(TAG, "Schedule Triggering OTA");
+                       chip::DeviceLayer::PlatformMgr().ScheduleWork([](intptr_t) {
+                           ESP_LOGI(TAG, "Triggering OTA");
+                           chip::OTARequestorInterface * requestor = chip::GetRequestorInstance();
+                           if (requestor == nullptr)
+                           {
+                               ChipLogError(SoftwareUpdate, "Can't get the CASESessionManager");
+                           }
+                           else
+                           {
+                               requestor->TriggerImmediateQuery();
+                           }
+                       },
+                       reinterpret_cast<intptr_t>(nullptr));
                    })
-            ->Item("More")
             ->Item("Items")
             ->Item("For")
             ->Item("Demo")));
