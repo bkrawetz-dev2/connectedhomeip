@@ -48,46 +48,46 @@ constexpr uint32_t kImmediateStartDelayMs = 1; // Start the timer with this valu
 
 static void LogQueryImageResponse(const QueryImageResponse::DecodableType & response)
 {
-    ChipLogDetail(SoftwareUpdate, "QueryImageResponse:");
-    ChipLogDetail(SoftwareUpdate, "  status: %u", to_underlying(response.status));
+    ChipLogError(SoftwareUpdate, "QueryImageResponse:");
+    ChipLogError(SoftwareUpdate, "  status: %u", to_underlying(response.status));
     if (response.delayedActionTime.HasValue())
     {
-        ChipLogDetail(SoftwareUpdate, "  delayedActionTime: %" PRIu32 " seconds", response.delayedActionTime.Value());
+        ChipLogError(SoftwareUpdate, "  delayedActionTime: %" PRIu32 " seconds", response.delayedActionTime.Value());
     }
     if (response.imageURI.HasValue())
     {
-        ChipLogDetail(SoftwareUpdate, "  imageURI: %.*s", static_cast<int>(response.imageURI.Value().size()),
+        ChipLogError(SoftwareUpdate, "  imageURI: %.*s", static_cast<int>(response.imageURI.Value().size()),
                       response.imageURI.Value().data());
     }
     if (response.softwareVersion.HasValue())
     {
-        ChipLogDetail(SoftwareUpdate, "  softwareVersion: %" PRIu32 "", response.softwareVersion.Value());
+        ChipLogError(SoftwareUpdate, "  softwareVersion: %" PRIu32 "", response.softwareVersion.Value());
     }
     if (response.softwareVersionString.HasValue())
     {
-        ChipLogDetail(SoftwareUpdate, "  softwareVersionString: %.*s",
+        ChipLogError(SoftwareUpdate, "  softwareVersionString: %.*s",
                       static_cast<int>(response.softwareVersionString.Value().size()),
                       response.softwareVersionString.Value().data());
     }
     if (response.updateToken.HasValue())
     {
-        ChipLogDetail(SoftwareUpdate, "  updateToken: %zu", response.updateToken.Value().size());
+        ChipLogError(SoftwareUpdate, "  updateToken: %zu", response.updateToken.Value().size());
     }
     if (response.userConsentNeeded.HasValue())
     {
-        ChipLogDetail(SoftwareUpdate, "  userConsentNeeded: %d", response.userConsentNeeded.Value());
+        ChipLogError(SoftwareUpdate, "  userConsentNeeded: %d", response.userConsentNeeded.Value());
     }
     if (response.metadataForRequestor.HasValue())
     {
-        ChipLogDetail(SoftwareUpdate, "  metadataForRequestor: %zu", response.metadataForRequestor.Value().size());
+        ChipLogError(SoftwareUpdate, "  metadataForRequestor: %zu", response.metadataForRequestor.Value().size());
     }
 }
 
 static void LogApplyUpdateResponse(const ApplyUpdateResponse::DecodableType & response)
 {
-    ChipLogDetail(SoftwareUpdate, "ApplyUpdateResponse:");
-    ChipLogDetail(SoftwareUpdate, "  action: %u", to_underlying(response.action));
-    ChipLogDetail(SoftwareUpdate, "  delayedActionTime: %" PRIu32 " seconds", response.delayedActionTime);
+    ChipLogError(SoftwareUpdate, "ApplyUpdateResponse:");
+    ChipLogError(SoftwareUpdate, "  action: %u", to_underlying(response.action));
+    ChipLogError(SoftwareUpdate, "  delayedActionTime: %" PRIu32 " seconds", response.delayedActionTime);
 }
 
 void StartDelayTimerHandler(System::Layer * systemLayer, void * appState)
@@ -127,7 +127,7 @@ void OTARequestor::OnQueryImageResponse(void * context, const QueryImageResponse
 
         if (update.softwareVersion > requestorCore->mCurrentVersion)
         {
-            ChipLogDetail(SoftwareUpdate, "Update available from %" PRIu32 " to %" PRIu32 " version",
+            ChipLogError(SoftwareUpdate, "Update available from %" PRIu32 " to %" PRIu32 " version",
                           requestorCore->mCurrentVersion, update.softwareVersion);
             MutableByteSpan updateToken(requestorCore->mUpdateTokenBuffer);
             // This function copies the bytespan to mutablebytespan only if size of mutablebytespan buffer is greater or equal to
@@ -146,7 +146,7 @@ void OTARequestor::OnQueryImageResponse(void * context, const QueryImageResponse
         }
         else
         {
-            ChipLogDetail(SoftwareUpdate, "Version %" PRIu32 " is older or same than current version %" PRIu32 ", not updating",
+            ChipLogError(SoftwareUpdate, "Version %" PRIu32 " is older or same than current version %" PRIu32 ", not updating",
                           update.softwareVersion, requestorCore->mCurrentVersion);
 
             requestorCore->mOtaRequestorDriver->UpdateNotFound(UpdateNotFoundReason::UpToDate,
@@ -176,7 +176,7 @@ void OTARequestor::OnQueryImageFailure(void * context, CHIP_ERROR error)
     OTARequestor * requestorCore = static_cast<OTARequestor *>(context);
     VerifyOrDie(requestorCore != nullptr);
 
-    ChipLogDetail(SoftwareUpdate, "QueryImage failure response %" CHIP_ERROR_FORMAT, error.Format());
+    ChipLogError(SoftwareUpdate, "QueryImage failure response %" CHIP_ERROR_FORMAT, error.Format());
     requestorCore->RecordErrorUpdateState(UpdateFailureState::kQuerying, error);
 }
 
@@ -208,7 +208,7 @@ void OTARequestor::OnApplyUpdateFailure(void * context, CHIP_ERROR error)
     OTARequestor * requestorCore = static_cast<OTARequestor *>(context);
     VerifyOrDie(requestorCore != nullptr);
 
-    ChipLogDetail(SoftwareUpdate, "ApplyUpdate failure response %" CHIP_ERROR_FORMAT, error.Format());
+    ChipLogError(SoftwareUpdate, "ApplyUpdate failure response %" CHIP_ERROR_FORMAT, error.Format());
     requestorCore->RecordErrorUpdateState(UpdateFailureState::kApplying, error);
 }
 
@@ -219,7 +219,7 @@ void OTARequestor::OnNotifyUpdateAppliedFailure(void * context, CHIP_ERROR error
     OTARequestor * requestorCore = static_cast<OTARequestor *>(context);
     VerifyOrDie(requestorCore != nullptr);
 
-    ChipLogDetail(SoftwareUpdate, "NotifyUpdateApplied failure response %" CHIP_ERROR_FORMAT, error.Format());
+    ChipLogError(SoftwareUpdate, "NotifyUpdateApplied failure response %" CHIP_ERROR_FORMAT, error.Format());
     requestorCore->RecordErrorUpdateState(UpdateFailureState::kNotifying, error);
 }
 
@@ -242,15 +242,15 @@ EmberAfStatus OTARequestor::HandleAnnounceOTAProvider(app::CommandHandler * comm
     mProviderLocation.SetValue(providerLocation);
 
     ChipLogProgress(SoftwareUpdate, "OTA Requestor received AnnounceOTAProvider");
-    ChipLogDetail(SoftwareUpdate, "  FabricIndex: %u", providerLocation.fabricIndex);
-    ChipLogDetail(SoftwareUpdate, "  ProviderNodeID: 0x" ChipLogFormatX64, ChipLogValueX64(providerLocation.providerNodeID));
-    ChipLogDetail(SoftwareUpdate, "  VendorID: 0x%" PRIx16, commandData.vendorId);
-    ChipLogDetail(SoftwareUpdate, "  AnnouncementReason: %u", to_underlying(announcementReason));
+    ChipLogError(SoftwareUpdate, "  FabricIndex: %u", providerLocation.fabricIndex);
+    ChipLogError(SoftwareUpdate, "  ProviderNodeID: 0x" ChipLogFormatX64, ChipLogValueX64(providerLocation.providerNodeID));
+    ChipLogError(SoftwareUpdate, "  VendorID: 0x%" PRIx16, commandData.vendorId);
+    ChipLogError(SoftwareUpdate, "  AnnouncementReason: %u", to_underlying(announcementReason));
     if (commandData.metadataForNode.HasValue())
     {
-        ChipLogDetail(SoftwareUpdate, "  MetadataForNode: %zu", commandData.metadataForNode.Value().size());
+        ChipLogError(SoftwareUpdate, "  MetadataForNode: %zu", commandData.metadataForNode.Value().size());
     }
-    ChipLogDetail(SoftwareUpdate, "  Endpoint: %" PRIu16, providerLocation.endpoint);
+    ChipLogError(SoftwareUpdate, "  Endpoint: %" PRIu16, providerLocation.endpoint);
 
     // If reason is URGENT_UPDATE_AVAILABLE, we start OTA immediately. Otherwise, respect the timer value set in mOtaStartDelayMs.
     // This is done to exemplify what a real-world OTA Requestor might do while also being configurable enough to use as a test app.
@@ -286,7 +286,7 @@ void OTARequestor::ConnectToProvider(OnConnectedAction onConnectedAction)
     // Set the action to take once connection is successfully established
     mOnConnectedAction = onConnectedAction;
 
-    ChipLogDetail(SoftwareUpdate, "Establishing session to provider node ID 0x" ChipLogFormatX64 " on fabric index %d",
+    ChipLogError(SoftwareUpdate, "Establishing session to provider node ID 0x" ChipLogFormatX64 " on fabric index %d",
                   ChipLogValueX64(mProviderLocation.Value().providerNodeID), mProviderLocation.Value().fabricIndex);
     CHIP_ERROR err =
         mCASESessionManager->FindOrEstablishSession(fabricInfo->GetPeerIdForNode(mProviderLocation.Value().providerNodeID),
@@ -413,8 +413,13 @@ void OTARequestor::OnConnectionFailure(void * context, PeerId peerId, CHIP_ERROR
 
 OTARequestorInterface::OTATriggerResult OTARequestor::TriggerImmediateQuery()
 {
+    ProviderLocation::Type location;
     if (mProviderLocation.HasValue())
     {
+        ChipLogProgress(SoftwareUpdate, "OTA Requestor triggering OTA");
+        ChipLogError(SoftwareUpdate, "  FabricIndex: %u", location.fabricIndex);
+        ChipLogError(SoftwareUpdate, "  ProviderNodeID: 0x" ChipLogFormatX64, ChipLogValueX64(location.providerNodeID));
+        ChipLogError(SoftwareUpdate, "  Endpoint: %" PRIu16, location.endpoint);
         ConnectToProvider(kQueryImage);
         return kTriggerSuccessful;
     }

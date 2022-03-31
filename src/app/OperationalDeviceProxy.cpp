@@ -51,10 +51,12 @@ CHIP_ERROR OperationalDeviceProxy::Connect(Callback::Callback<OnDeviceConnected>
     switch (mState)
     {
     case State::Uninitialized:
+        ChipLogError(Controller, "ODP::Connect: State::Uninitialized");
         err = CHIP_ERROR_INCORRECT_STATE;
         break;
 
     case State::NeedsAddress:
+        ChipLogError(Controller, "ODP::Connect: State::NeedsAddress");
         VerifyOrReturnError(resolver != nullptr, CHIP_ERROR_INVALID_ARGUMENT);
         if (resolver->ResolveNodeIdFromInternalCache(mPeerId, Inet::IPAddressType::kAny))
         {
@@ -68,6 +70,7 @@ CHIP_ERROR OperationalDeviceProxy::Connect(Callback::Callback<OnDeviceConnected>
         break;
 
     case State::Initialized:
+        ChipLogError(Controller, "ODP::Connect: State::Initialized");
         err = EstablishConnection();
         if (err == CHIP_NO_ERROR)
         {
@@ -75,10 +78,12 @@ CHIP_ERROR OperationalDeviceProxy::Connect(Callback::Callback<OnDeviceConnected>
         }
         break;
     case State::Connecting:
+        ChipLogError(Controller, "ODP::Connect: State::Connecting");
         EnqueueConnectionCallbacks(onConnection, onFailure);
         break;
 
     case State::SecureConnected:
+        ChipLogError(Controller, "ODP::Connect: State::SecureConnected");
         if (onConnection != nullptr)
         {
             onConnection->mCall(onConnection->mContext, this);
@@ -86,6 +91,7 @@ CHIP_ERROR OperationalDeviceProxy::Connect(Callback::Callback<OnDeviceConnected>
         break;
 
     default:
+        ChipLogError(Controller, "ODP::Connect: default");
         err = CHIP_ERROR_INCORRECT_STATE;
     };
 

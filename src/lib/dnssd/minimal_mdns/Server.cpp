@@ -335,6 +335,7 @@ CHIP_ERROR ServerBase::BroadcastSend(chip::System::PacketBufferHandle && data, u
     return BroadcastImpl(std::move(data), port, &socketPicker);
 }
 
+//bk-2
 CHIP_ERROR ServerBase::BroadcastImpl(chip::System::PacketBufferHandle && data, uint16_t port, BroadcastSendDelegate * delegate)
 {
     // Broadcast requires sending data multiple times, each of which may error

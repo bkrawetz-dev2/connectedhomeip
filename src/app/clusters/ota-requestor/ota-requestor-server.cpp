@@ -93,6 +93,7 @@ CHIP_ERROR OtaSoftwareUpdateRequestorAttrAccess::ReadDefaultOtaProviders(Attribu
 CHIP_ERROR OtaSoftwareUpdateRequestorAttrAccess::WriteDefaultOtaProviders(const ConcreteDataAttributePath & aPath,
                                                                           AttributeValueDecoder & aDecoder)
 {
+    ChipLogError(SoftwareUpdate, "bkrawetz: WriteDefaultOtaProviders");
     chip::OTARequestorInterface * requestor = chip::GetRequestorInstance();
     if (requestor == nullptr)
     {
