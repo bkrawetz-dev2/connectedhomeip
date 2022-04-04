@@ -45,7 +45,7 @@ CHIP_ERROR AttributeCache::UpdateCache(const ConcreteDataAttributePath & aPath, 
         //
         handle.RightSize();
 
-        state.Set<System::PacketBufferHandle>(std::move(handle));
+        state.Set<PacketBufferInfo>(std::move(handle), aPath.mDataVersion.Value());
     }
     else
     {
@@ -144,10 +144,28 @@ CHIP_ERROR AttributeCache::Get(const ConcreteAttributePath & path, TLV::TLVReade
 
     System::PacketBufferTLVReader bufReader;
 
-    bufReader.Init(attributeState->Get<System::PacketBufferHandle>().Retain());
+    bufReader.Init(attributeState->Get<PacketBufferInfo>().mHandle.Retain());
     ReturnErrorOnFailure(bufReader.Next());
 
     reader.Init(bufReader);
+    return CHIP_NO_ERROR;
+}
+
+CHIP_ERROR AttributeCache::GetVersion(const ConcreteAttributePath & path, Optional<DataVersion> & aVersion)
+{
+    CHIP_ERROR err;
+
+    auto attributeState = GetAttributeState(path.mEndpointId, path.mClusterId, path.mAttributeId, err);
+    ReturnErrorOnFailure(err);
+
+    if (attributeState->Is<StatusIB>())
+    {
+        return CHIP_ERROR_IM_STATUS_CODE_RECEIVED;
+    }
+
+    System::PacketBufferTLVReader bufReader;
+
+    aVersion.SetValue(attributeState->Get<PacketBufferInfo>().mDataVersion);
     return CHIP_NO_ERROR;
 }
 
@@ -226,33 +244,18 @@ uint32_t AttributeCache::OnUpdateDataVersionFilterList(DataVersionFilterIBs::Bui
     CHIP_ERROR err  = CHIP_NO_ERROR;
     TLV::TLVWriter backup;
 
-    std::set<ConcreteClusterPathWithSize, compare> clusterSet;
+    std::set<std::pair<DataVersionFilter, size_t>, compare> filterSet;
+    UpdateFilterSet(filterSet);
 
-    for (auto & path : mChangedAttributeSet)
-    {
-        if (!path.mDataVersion.HasValue())
-        {
-            continue;
-        }
-        ConcreteClusterPathWithSize cluster(path.mEndpointId, path.mClusterId, path.mDataVersion.Value());
-        UpdateClusterSize(cluster);
-        if (cluster.mSize > 0)
-        {
-            clusterSet.insert(cluster);
-        }
-    }
-
-    for (auto path = clusterSet.rbegin(); path != clusterSet.rend(); path++)
+    for (auto filter = filterSet.rbegin(); filter != filterSet.rend(); filter++)
     {
         bool intersected = false;
-        DataVersionFilter dataVersionFilter(path->mEndpointId, path->mClusterId, path->mDataVersion);
         aDataVersionFilterIBsBuilder.Checkpoint(backup);
-        VerifyOrExit(dataVersionFilter.IsValidDataVersionFilter(), err = CHIP_ERROR_INCORRECT_STATE);
 
         // if the particular cached data version does not intersect with user provided attribute paths, skip the cached one
         for (auto & attribute : aAttributePaths)
         {
-            if (attribute.IsAttributePathIntersect(*path))
+            if (attribute.IsAttributePathIntersect(filter->first))
             {
                 intersected = true;
                 break;
@@ -263,18 +266,18 @@ uint32_t AttributeCache::OnUpdateDataVersionFilterList(DataVersionFilterIBs::Bui
             continue;
         }
 
-        DataVersionFilterIB::Builder & filter = aDataVersionFilterIBsBuilder.CreateDataVersionFilter();
+        DataVersionFilterIB::Builder & filterIB = aDataVersionFilterIBsBuilder.CreateDataVersionFilter();
         SuccessOrExit(err = aDataVersionFilterIBsBuilder.GetError());
-        ClusterPathIB::Builder & filterPath = filter.CreatePath();
-        SuccessOrExit(err = filter.GetError());
-        SuccessOrExit(err = filterPath.Endpoint(dataVersionFilter.mEndpointId)
-                                .Cluster(dataVersionFilter.mClusterId)
+        ClusterPathIB::Builder & filterPath = filterIB.CreatePath();
+        SuccessOrExit(err = filterIB.GetError());
+        SuccessOrExit(err = filterPath.Endpoint(filter->first.mEndpointId)
+                                .Cluster(filter->first.mClusterId)
                                 .EndOfClusterPathIB()
                                 .GetError());
-        SuccessOrExit(err = filter.DataVersion(dataVersionFilter.mDataVersion.Value()).EndOfDataVersionFilterIB().GetError());
+        SuccessOrExit(err = filterIB.DataVersion(filter->first.mDataVersion.Value()).EndOfDataVersionFilterIB().GetError());
         ChipLogProgress(
             DataManagement, "Update DataVersionFilter: Endpoint=%" PRIu16 " Cluster=" ChipLogFormatMEI " Version=%" PRIu32,
-            dataVersionFilter.mEndpointId, ChipLogValueMEI(dataVersionFilter.mClusterId), dataVersionFilter.mDataVersion.Value());
+                filter->first.mEndpointId, ChipLogValueMEI(filter->first.mClusterId), filter->first.mDataVersion.Value());
 
         number++;
     }

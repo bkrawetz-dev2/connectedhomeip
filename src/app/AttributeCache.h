@@ -37,17 +37,17 @@ namespace app {
 
 struct compare
 {
-    bool operator()(const ConcreteClusterPathWithSize & x, const ConcreteClusterPathWithSize & y) const
+    bool operator()(const std::pair<DataVersionFilter, size_t> & x, const std::pair<DataVersionFilter, size_t> & y) const
     {
-        if (x == y)
+        if (x.first == y.first)
         {
             return false;
         }
-        return x.mSize <= y.mSize;
+        return x.second <= y.second;
     }
 };
 
-/*
+    /*
  * This implements an attribute cache designed to aggregate attribute data received by a client
  * from either read or subscribe interactions and keep it resident and available for clients to
  * query at any time while the cache is active.
@@ -75,6 +75,14 @@ struct compare
 class AttributeCache : protected ReadClient::Callback
 {
 public:
+    struct PacketBufferInfo
+    {
+        System::PacketBufferHandle mHandle;
+        DataVersion mDataVersion = 0;
+
+        PacketBufferInfo(System::PacketBufferHandle && aHandle, DataVersion aDataVersion) : mHandle(std::move(aHandle)), mDataVersion(aDataVersion) {}
+    };
+
     class Callback : public ReadClient::Callback
     {
     public:
@@ -229,35 +237,45 @@ public:
      */
     CHIP_ERROR Get(const ConcreteAttributePath & path, TLV::TLVReader & reader);
 
-    void UpdateClusterSize(ConcreteClusterPathWithSize & aCluster)
+    CHIP_ERROR GetVersion(const ConcreteAttributePath & path, Optional<DataVersion> & aVersion);
+
+    void UpdateFilterSet(std::set<std::pair<DataVersionFilter, size_t>, compare> & aSet)
     {
-        uint32_t totalSize = 0;
-        ForEachAttribute(aCluster.mEndpointId, aCluster.mClusterId, [this, &totalSize](const ConcreteAttributePath & path) {
-            TLV::TLVReader reader;
-            CHIP_ERROR err;
-            err = Get(path, reader);
-            if (err == CHIP_ERROR_IM_STATUS_CODE_RECEIVED)
+        for(auto const& endpointIter: mCache)
+        {
+            EndpointId endpointId = endpointIter.first;
+            for(auto const& clusterIter: endpointIter.second)
             {
-                StatusIB status;
-                ReturnErrorOnFailure(GetStatus(path, status));
-                err = CHIP_NO_ERROR;
-            }
-            else if (err == CHIP_NO_ERROR)
-            {
-                // Skip to the end of the element.
-                ReturnErrorOnFailure(reader.Skip());
+                DataVersion dataVersion = 0;
+                uint32_t clusterSize = 0;
+                ClusterId clusterId = clusterIter.first;
+                for(auto const& attributeIter: clusterIter.second)
+                {
+                    if (!attributeIter.second.Is<StatusIB>())
+                    {
+                        TLV::TLVReader reader;
+                        System::PacketBufferTLVReader bufReader;
+                        bufReader.Init(attributeIter.second.Get<PacketBufferInfo>().mHandle.Retain());
+                        ReturnOnFailure(bufReader.Next());
 
-                // Compute the amount of value data
-                totalSize += reader.GetLengthRead();
-            }
-            else
-            {
-                return err;
-            }
+                        reader.Init(bufReader);
+                        // Skip to the end of the element.
+                        ReturnOnFailure(reader.Skip());
 
-            return CHIP_NO_ERROR;
-        });
-        aCluster.mSize = totalSize;
+                        // Compute the amount of value data
+                        clusterSize += reader.GetLengthRead();
+
+                        dataVersion = attributeIter.second.Get<PacketBufferInfo>().mDataVersion;
+                    }
+                }
+                if (clusterSize == 0)
+                {
+                    continue;
+                }
+                DataVersionFilter filter(endpointId, clusterId, dataVersion);
+                aSet.insert(std::pair<DataVersionFilter, size_t>(filter, clusterSize));
+            }
+        }
     }
 
     /*
@@ -354,7 +372,7 @@ public:
     }
 
 private:
-    using AttributeState = Variant<System::PacketBufferHandle, StatusIB>;
+    using AttributeState = Variant<PacketBufferInfo, StatusIB>;
     using ClusterState   = std::map<AttributeId, AttributeState>;
     using EndpointState  = std::map<ClusterId, ClusterState>;
     using NodeState      = std::map<EndpointId, EndpointState>;
@@ -409,7 +427,6 @@ private:
 private:
     Callback & mCallback;
     NodeState mCache;
-
     std::set<ConcreteDataAttributePath> mChangedAttributeSet;
 
     std::vector<EndpointId> mAddedEndpoints;

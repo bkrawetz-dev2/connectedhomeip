@@ -612,35 +612,37 @@ void TestCache(nlTestSuite * apSuite, void * apContext)
                              AttributeInstruction(AttributeInstruction::kAttributeB, 0, AttributeInstruction::kData) });
 }
 
-void TestSortConcreteDataAttributePathWithSize(nlTestSuite * apSuite, void * apContext)
+void TestSortDataVersionFilterSet(nlTestSuite * apSuite, void * apContext)
 {
-    ConcreteClusterPathWithSize cluster1;
-    cluster1.mSize = 1;
-    ConcreteClusterPathWithSize cluster2;
-    cluster2.mSize = 1;
-    ConcreteClusterPathWithSize cluster3;
-    cluster3.mSize = 1;
-    std::set<ConcreteClusterPathWithSize, compare> clusterSet;
-    clusterSet.insert(cluster1);
-    clusterSet.insert(cluster2);
-    clusterSet.insert(cluster3);
-    NL_TEST_ASSERT(gSuite, 1 == clusterSet.size());
-    clusterSet.clear();
-    cluster1.mEndpointId = 1;
-    cluster1.mSize       = 2;
-    cluster2.mEndpointId = 2;
-    cluster2.mSize       = 4;
-    cluster3.mEndpointId = 3;
-    cluster3.mSize       = 1;
-    clusterSet.insert(cluster1);
-    clusterSet.insert(cluster2);
-    clusterSet.insert(cluster3);
-    NL_TEST_ASSERT(gSuite, 3 == clusterSet.size());
-    uint32_t temp = 0;
-    for (auto & item : clusterSet)
+    std::set<std::pair<DataVersionFilter, size_t>, compare> filterSet;
+    DataVersionFilter filter1(1, 1, 1);
+    DataVersionFilter filter2(1, 1, 2);
+    filterSet.insert(std::pair<DataVersionFilter, size_t>(filter1, 1));
+    filterSet.insert(std::pair<DataVersionFilter, size_t>(filter2, 2));
+    NL_TEST_ASSERT(gSuite, 2 == filterSet.size());
+    DataVersionFilter filter3(1, 1, 1);
+    filterSet.insert(std::pair<DataVersionFilter, size_t>(filter2, 1));
+    NL_TEST_ASSERT(gSuite, 2 == filterSet.size());
+    size_t temp = 0;
+    for (auto & item : filterSet)
     {
-        NL_TEST_ASSERT(gSuite, temp < item.mSize);
-        temp = item.mSize;
+        NL_TEST_ASSERT(gSuite, temp < item.second);
+        temp = item.second;
+    }
+    filterSet.clear();
+
+    DataVersionFilter filter4(1, 1, 1);
+    DataVersionFilter filter5(2, 1, 1);
+    DataVersionFilter filter6(3, 1, 1);
+    filterSet.insert(std::pair<DataVersionFilter, size_t>(filter4, 2));
+    filterSet.insert(std::pair<DataVersionFilter, size_t>(filter5, 4));
+    filterSet.insert(std::pair<DataVersionFilter, size_t>(filter6, 3));
+
+    temp = 0;
+    for (auto & item : filterSet)
+    {
+        NL_TEST_ASSERT(gSuite, temp < item.second);
+        temp = item.second;
     }
 }
 
@@ -648,7 +650,7 @@ void TestSortConcreteDataAttributePathWithSize(nlTestSuite * apSuite, void * apC
 const nlTest sTests[] =
 {
     NL_TEST_DEF("TestCache", TestCache),
-    NL_TEST_DEF("TestSortConcreteDataAttributePathWithSize", TestSortConcreteDataAttributePathWithSize),
+    NL_TEST_DEF("TestSortDataVersionFilterSet", TestSortDataVersionFilterSet),
     NL_TEST_SENTINEL()
 };
 
