@@ -47,7 +47,7 @@ struct compare
     }
 };
 
-    /*
+/*
  * This implements an attribute cache designed to aggregate attribute data received by a client
  * from either read or subscribe interactions and keep it resident and available for clients to
  * query at any time while the cache is active.
@@ -80,7 +80,9 @@ public:
         System::PacketBufferHandle mHandle;
         DataVersion mDataVersion = 0;
 
-        PacketBufferInfo(System::PacketBufferHandle && aHandle, DataVersion aDataVersion) : mHandle(std::move(aHandle)), mDataVersion(aDataVersion) {}
+        PacketBufferInfo(System::PacketBufferHandle && aHandle, DataVersion aDataVersion) :
+            mHandle(std::move(aHandle)), mDataVersion(aDataVersion)
+        {}
     };
 
     class Callback : public ReadClient::Callback
@@ -241,15 +243,15 @@ public:
 
     void UpdateFilterSet(std::set<std::pair<DataVersionFilter, size_t>, compare> & aSet)
     {
-        for(auto const& endpointIter: mCache)
+        for (auto const & endpointIter : mCache)
         {
             EndpointId endpointId = endpointIter.first;
-            for(auto const& clusterIter: endpointIter.second)
+            for (auto const & clusterIter : endpointIter.second)
             {
                 DataVersion dataVersion = 0;
-                uint32_t clusterSize = 0;
-                ClusterId clusterId = clusterIter.first;
-                for(auto const& attributeIter: clusterIter.second)
+                uint32_t clusterSize    = 0;
+                ClusterId clusterId     = clusterIter.first;
+                for (auto const & attributeIter : clusterIter.second)
                 {
                     if (!attributeIter.second.Is<StatusIB>())
                     {

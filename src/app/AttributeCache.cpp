@@ -270,14 +270,12 @@ uint32_t AttributeCache::OnUpdateDataVersionFilterList(DataVersionFilterIBs::Bui
         SuccessOrExit(err = aDataVersionFilterIBsBuilder.GetError());
         ClusterPathIB::Builder & filterPath = filterIB.CreatePath();
         SuccessOrExit(err = filterIB.GetError());
-        SuccessOrExit(err = filterPath.Endpoint(filter->first.mEndpointId)
-                                .Cluster(filter->first.mClusterId)
-                                .EndOfClusterPathIB()
-                                .GetError());
+        SuccessOrExit(
+            err = filterPath.Endpoint(filter->first.mEndpointId).Cluster(filter->first.mClusterId).EndOfClusterPathIB().GetError());
         SuccessOrExit(err = filterIB.DataVersion(filter->first.mDataVersion.Value()).EndOfDataVersionFilterIB().GetError());
-        ChipLogProgress(
-            DataManagement, "Update DataVersionFilter: Endpoint=%" PRIu16 " Cluster=" ChipLogFormatMEI " Version=%" PRIu32,
-                filter->first.mEndpointId, ChipLogValueMEI(filter->first.mClusterId), filter->first.mDataVersion.Value());
+        ChipLogProgress(DataManagement,
+                        "Update DataVersionFilter: Endpoint=%" PRIu16 " Cluster=" ChipLogFormatMEI " Version=%" PRIu32,
+                        filter->first.mEndpointId, ChipLogValueMEI(filter->first.mClusterId), filter->first.mDataVersion.Value());
 
         number++;
     }
